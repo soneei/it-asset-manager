@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产档案 - {{ asset.asset_id }}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f4f6f9;color:#2d3436;padding:24px;line-height:1.5}
+.wrap{max-width:960px;margin:0 auto}
+.topbar{margin-bottom:16px}
+.topbar a{color:#0052d9;text-decoration:none;font-size:14px;font-weight:500}
+.hero{background:linear-gradient(135deg,#1e3a5f,#0052d9);color:#fff;border-radius:14px;padding:28px 32px;margin-bottom:20px}
+.hero .code{font-family:monospace;font-size:14px;opacity:.85;margin-bottom:6px}
+.hero h1{font-size:24px;font-weight:700;margin-bottom:8px}
+.hero .meta{font-size:14px;opacity:.85}
+.hero .badge{display:inline-block;margin-top:14px;padding:5px 18px;border-radius:20px;background:rgba(255,255,255,.18);font-size:13px;font-weight:500}
+.card{background:#fff;border-radius:12px;padding:22px 26px;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.card h3{font-size:16px;color:#0052d9;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #eef1f5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px}
+.item .l{font-size:12px;color:#95a5a6;margin-bottom:3px}
+.item .v{font-size:14px;font-weight:500;word-break:break-all}
+.item.full{grid-column:1/-1}
+.item .v.price{color:#d93026;font-weight:700}
+.timeline{margin-top:6px;padding-left:12px;border-left:2px solid #e1e4e8}
+.ev{position:relative;padding-left:20px;margin-bottom:18px}
+.ev::before{content:'';position:absolute;left:-27px;top:2px;width:10px;height:10px;background:#0052d9;border-radius:50%;border:3px solid #e6f7ff}
+.ev .d{font-size:12px;color:#888;margin-bottom:3px}
+.ev .a{font-size:14px;font-weight:700;color:#333}
+.ev .o{font-size:12px;color:#0052d9;background:#e6f7ff;padding:2px 7px;border-radius:4px;display:inline-block;margin-top:4px}
+.ev .s{font-size:12px;color:#555;margin-top:4px}
+.actions{display:flex;flex-wrap:wrap;gap:12px}
+.actions form{margin:0;display:inline-flex;align-items:center;gap:8px}
+select,input[type=text]{padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+.btn{padding:8px 16px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:#fff;text-decoration:none;display:inline-block}
+.btn-blue{background:#0052d9}.btn-green{background:#28a745}.btn-purple{background:#6c5ce7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a href="/">← 返回资产大盘</a></div>
+
+  <div class="hero">
+    <div class="code">{{ asset.asset_id }}</div>
+    <h1>{{ asset.name }}</h1>
+    <div class="meta">👤 {{ asset.assignee or '未分配' }}　·　🏢 {{ asset.department or '-' }}　·　📍 {{ asset.location or '-' }}</div>
+    <div class="badge">{{ {'in_use':'分配使用(在用)','in_stock':'闲置入库','scrapped':'已报废','disposed':'已处置'}.get(asset.status, asset.status) }}</div>
+  </div>
+
+  <div class="card">
+    <h3>💻 硬件配置</h3>
+    <div class="grid">
+      <div class="item"><div class="l">品牌</div><div class="v">{{ asset.brand or '-' }}</div></div>
+      <div class="item"><div class="l">类型</div><div class="v">{{ {'laptop':'笔记本','desktop':'台式机','monitor':'显示器','phone':'手机','tablet':'平板','keyboard_mouse':'键鼠','printer':'打印机','other':'其他'}.get(asset.asset_type, asset.asset_type or '-') }}</div></div>
+      <div class="item full"><div class="l">型号</div><div class="v">{{ asset.model or '-' }}</div></div>
+      <div class="item full"><div class="l">SN序列号</div><div class="v" style="font-family:monospace;">{{ asset.serial_number or '-' }}</div></div>
+      <div class="item"><div class="l">CPU</div><div class="v">{{ asset.cpu or '-' }}</div></div>
+      <div class="item"><div class="l">内存</div><div class="v">{{ asset.memory or '-' }}</div></div>
+      <div class="item full"><div class="l">硬盘/存储</div><div class="v">{{ asset.disk or '-' }}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🛒 采购与财务信息</h3>
+    <div class="grid">
+      <div class="item"><div class="l">采购价格</div><div class="v price">¥{{ asset.purchase_price }}</div></div>
+      <div class="item"><div class="l">采购日期</div><div class="v">{{ asset.purchase_date or '-' }}</div></div>
+      <div class="item"><div class="l">领用/分配日期</div><div class="v">{{ asset.assign_date[:10] if asset.assign_date else '-' }}</div></div>
+      <div class="item"><div class="l">供应商</div><div class="v">{{ asset.supplier or '-' }}</div></div>
+      <div class="item"><div class="l">维保到期</div><div class="v">{{ asset.warranty_expire or '-' }}</div></div>
+      <div class="item"><div class="l">折旧年限</div><div class="v">{{ asset.depreciation_years or '-' }} 年</div></div>
+      <div class="item full"><div class="l">订单号</div><div class="v">{{ asset.order_number or '-' }}</div></div>
+      <div class="item full"><div class="l">OA付款单号</div><div class="v">{{ asset.oa_payment_number if asset.oa_payment_number else '-' }}</div></div>
+      <div class="item full"><div class="l">备注</div><div class="v" style="font-size:13px;color:#666;">{{ asset.remarks or '-' }}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📜 审计履历</h3>
+    <div class="timeline">
+      {% for log in logs %}
+      <div class="ev">
+        <div class="d">{{ log['timestamp'][:19].replace('T',' ') }}</div>
+        <div class="a">{{ {'退库入库':'📦 退库入库','STATUS_CHANGE':'🔄 状态变更','INVENTORY':'📋 现场盘点','IMPORT':'📥 系统导入','ASSIGN':'📌 资产分配','入库':'📥 入库','信息修正':'✏️ 信息修正'}.get(log['operation'], '🔄 ' + log['operation']) }}</div>
+        <div class="o">操作人: {{ log['operator'] }}</div>
+        <div class="s">{{ log['summary'] }}</div>
+      </div>
+      {% else %}
+      <div style="font-size:13px;color:#999;">暂无履历记录</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🛠️ 操作</h3>
+    <div class="actions">
+      <form action="/api/update_status" method="POST">
+        <input type="hidden" name="asset_id" value="{{ asset.asset_id }}">
+        <select name="new_status">
+          <option value="in_stock" {% if asset.status == 'in_stock' %}selected{% endif %}>闲置入库</option>
+          <option value="in_use" {% if asset.status == 'in_use' %}selected{% endif %}>分配使用</option>
+          <option value="scrapped" {% if asset.status == 'scrapped' %}selected{% endif %}>报废</option>
+        </select>
+        <button type="submit" class="btn btn-blue">更新状态</button>
+      </form>
+      <form action="/api/assign" method="POST" style="display:inline-flex;align-items:center;gap:8px;">
+        <input type="hidden" name="asset_id" value="{{ asset.asset_id }}">
+        <input type="text" name="assignee" placeholder="使用人姓名" value="{{ asset.assignee or '' }}" style="width:120px;">
+        <input type="hidden" name="operator" value="猫猫(资产档案页)">
+        <button type="submit" class="btn btn-green">派发/改派</button>
+      </form>
+      <a href="/api/scan/{{ asset.asset_id }}" target="_blank" class="btn btn-blue">📱 扫码体检单</a>
+      <a href="/api/print_label/{{ asset.asset_id }}" target="_blank" class="btn btn-purple">🖨️ 补打标签</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

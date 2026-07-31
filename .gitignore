@@ -1,0 +1,10 @@
+# 真实数据 / 运行产物（切勿提交）
+data/
+logs/
+__pycache__/
+*.log
+server.pid
+*.db
+*.bak
+.idea/
+.vscode/

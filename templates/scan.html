@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IT 资产管理系统资产体检单 - {{ asset.asset_id }}</title>
+<!-- ⚠️ 本文件为 Jinja2 后端模板，禁止直接在浏览器中打开！ -->
+<!-- 正确访问方式: http://localhost:8081/api/scan/{asset_id} -->
+<!-- ⚠️ 需后端渲染，勿双击打开 -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f6fa;color:#2d3436;min-height:100vh}
+.detail-hero{background:linear-gradient(135deg,#1e3a5f,#0052d9);color:#fff;padding:32px 24px 30px}
+.detail-hero .code{font-family:'SF Mono',monospace;font-size:16px;opacity:.9;margin-bottom:4px}
+.detail-hero h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.detail-hero .sub{font-size:14px;opacity:.8}
+.detail-hero .status-badge{display:inline-block;margin-top:12px;padding:4px 16px;border-radius:20px;background:rgba(255,255,255,.2);font-size:13px;font-weight:500}
+.detail-section{background:#fff;margin:16px;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.detail-section h3{font-size:15px;color:#0052d9;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f1f2f6; display: flex; align-items: center; gap: 6px;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-item .l{font-size:12px;color:#b2bec3;margin-bottom:2px}
+.detail-item .v{font-size:14px;font-weight:500;color:#2d3436; word-break: break-all;}
+.detail-item.full{grid-column:1/-1}
+
+.timeline { margin-top: 15px; padding-left: 10px; border-left: 2px solid #e1e4e8; }
+.time-event { position: relative; padding-left: 20px; margin-bottom: 20px; }
+.time-event::before { content: ''; position: absolute; left: -25px; top: 0; width: 10px; height: 10px; background: #0052d9; border-radius: 50%; border: 3px solid #e6f7ff; }
+.time-event .t-date { font-size: 12px; color: #888; margin-bottom: 4px; }
+.time-event .t-action { font-size: 14px; font-weight: bold; color: #333; }
+.time-event .t-operator { font-size: 12px; color: #0052d9; background: #e6f7ff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+
+.action-box { margin: 16px; padding: 20px; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; }
+.action-buttons { display: flex; flex-direction: column; gap: 10px; }
+.btn-primary { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 24px; font-size: 16px; font-weight: bold; width: 100%; display: block; }
+.btn-print { background: #6c5ce7; color: white; border: none; padding: 12px 24px; border-radius: 24px; font-size: 16px; font-weight: bold; width: 100%; display: block; text-decoration: none; cursor: pointer; }
+.btn-print:hover { background: #5a4bd1; }
+.success-msg { background: #e3f9e5; color: #28a745; padding: 12px; border-radius: 8px; margin: 16px; text-align: center; font-weight: bold; }
+</style>
+</head>
+<body>
+
+{% if request.query_params.get('success') %}
+<div class="success-msg">✅ 盘点确认成功！已记录审计日志。</div>
+{% endif %}
+
+<div class="detail-hero">
+    <div class="code">{{ asset.asset_id }}</div>
+    <h1>{{ asset.name }}</h1>
+    <div class="sub">👤 {{ asset.assignee or '未分配' }} · 🏢 {{ asset.department or '-' }}</div>
+    <div class="status-badge">{{ '分配使用(在用)' if asset.status == 'in_use' else ('闲置入库' if asset.status == 'in_stock' else asset.status) }}</div>
+</div>
+
+<div class="detail-section">
+    <h3>💻 硬件配置</h3>
+    <div class="detail-grid">
+        <div class="detail-item"><div class="l">品牌</div><div class="v">{{ asset.brand or '-' }}</div></div>
+        <div class="detail-item"><div class="l">类型</div><div class="v">{{ {'laptop':'笔记本','desktop':'台式机','monitor':'显示器','phone':'手机','tablet':'平板','keyboard_mouse':'键鼠','printer':'打印机','other':'其他'}.get(asset.asset_type, asset.asset_type or '-') }}</div></div>
+        <div class="detail-item full"><div class="l">型号</div><div class="v">{{ asset.model or '-' }}</div></div>
+        <div class="detail-item full"><div class="l">SN序列号</div><div class="v" style="font-family: monospace;">{{ asset.serial_number or '-' }}</div></div>
+        <div class="detail-item"><div class="l">CPU</div><div class="v">{{ asset.cpu or '-' }}</div></div>
+        <div class="detail-item"><div class="l">内存</div><div class="v">{{ asset.memory or '-' }}</div></div>
+        <div class="detail-item full"><div class="l">硬盘/存储</div><div class="v">{{ asset.disk or '-' }}</div></div>
+    </div>
+</div>
+
+<div class="detail-section">
+    <h3>🛒 采购与财务信息</h3>
+    <div class="detail-grid">
+        <div class="detail-item"><div class="l">采购价格</div><div class="v" style="color: #d93026; font-weight: bold;">¥{{ asset.purchase_price }}</div></div>
+        <div class="detail-item"><div class="l">采购日期</div><div class="v">{{ asset.purchase_date or '-' }}</div></div>
+        <div class="detail-item"><div class="l">供应商</div><div class="v">{{ asset.supplier or '-' }}</div></div>
+        <div class="detail-item"><div class="l">维保到期</div><div class="v">{{ asset.warranty_expire or '-' }}</div></div>
+        <div class="detail-item full"><div class="l">订单号</div><div class="v">{{ asset.order_number or '-' }}</div></div>
+        <div class="detail-item full"><div class="l">OA付款单号</div><div class="v">{{ asset.oa_payment_number if asset.oa_payment_number else '-' }}</div></div>
+        <div class="detail-item full"><div class="l">备注</div><div class="v" style="font-size:13px;color:#666;">{{ asset.remarks or '-' }}</div></div>
+    </div>
+</div>
+
+<div class="detail-section">
+    <h3>📜 审计履历时间轴</h3>
+    <div class="timeline">
+        {% for log in logs %}
+        <div class="time-event">
+            <div class="t-date">{{ log.timestamp[:19].replace('T', ' ') }}</div>
+            <div class="t-action">{{ {'退库入库':'📦 退库入库','STATUS_CHANGE':'🔄 状态变更','INVENTORY':'📋 现场盘点','IMPORT':'📥 系统导入','ASSIGN':'📌 资产分配'}.get(log.operation, '🔄 ' + log.operation) }}</div>
+            <div class="t-operator">操作人: {{ log.operator }}</div>
+            <div style="font-size: 12px; color: #555; margin-top: 4px;">{{ log.summary }}</div>
+        </div>
+        {% else %}
+        <div style="font-size: 12px; color: #999;">暂无履历记录</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="action-box">
+  <div class="action-buttons">
+    <form action="/api/scan_confirm" method="POST">
+      <input type="hidden" name="asset_id" value="{{ asset.asset_id }}">
+      <div style="margin-bottom: 15px; text-align: left;">
+        <label style="font-size: 12px; color: #b2bec3; display: block; margin-bottom: 4px;">盘点操作人 (记录审计用)</label>
+        <input type="text" name="operator" placeholder="请输入您的名字" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+      </div>
+      <button type="submit" class="btn-primary">✓ 现场盘点无误</button>
+    </form>
+    <a href="/api/print_label/{{ asset.asset_id }}" class="btn-print" target="_blank">🖨️ 补打标签</a>
+    <button onclick="openAssignScan()" class="btn-primary" style="background:#0052d9;">📤 派发 / 改派员工</button>
+  </div>
+</div>
+
+<!-- 派发/改派 modal -->
+<div id="assignModalScan" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:320px;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.2);">
+    <h3 style="margin-bottom:4px;font-size:15px;color:#0052d9;">派发 / 改派员工</h3>
+    <div style="font-family:monospace;color:#888;font-size:12px;margin-bottom:12px;">{{ asset.asset_id }}</div>
+    <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">使用人（员工姓名）</label>
+    <input id="assignNameScan" type="text" placeholder="输入员工姓名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+    <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">操作人（审计留痕）</label>
+    <input id="assignOpScan" type="text" placeholder="你的名字" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeAssignScan()" style="padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">取消</button>
+      <button onclick="submitAssignScan()" style="padding:8px 16px;border:none;border-radius:6px;background:#0052d9;color:#fff;cursor:pointer;font-size:13px;">确认派发</button>
+    </div>
+  </div>
+</div>
+<script>
+function openAssignScan(){document.getElementById('assignNameScan').value='';document.getElementById('assignOpScan').value='';document.getElementById('assignModalScan').style.display='flex';document.getElementById('assignNameScan').focus();}
+function closeAssignScan(){document.getElementById('assignModalScan').style.display='none';}
+function submitAssignScan(){
+  var name=document.getElementById('assignNameScan').value.trim();
+  if(!name){alert('请输入员工姓名');return;}
+  var op=document.getElementById('assignOpScan').value.trim();
+  var f=document.createElement('form');f.method='POST';f.action='/api/assign';
+  f.appendChild(Object.assign(document.createElement('input'),{type:'hidden',name:'asset_id',value:'{{ asset.asset_id }}'}));
+  f.appendChild(Object.assign(document.createElement('input'),{type:'hidden',name:'assignee',value:name}));
+  f.appendChild(Object.assign(document.createElement('input'),{type:'hidden',name:'operator',value:op||'猫猫(Web扫码页)'}));
+  f.appendChild(Object.assign(document.createElement('input'),{type:'hidden',name:'return_to',value:'/api/scan/{{ asset.asset_id }}'}));
+  document.body.appendChild(f);f.submit();
+}
+document.getElementById('assignModalScan').addEventListener('click',function(e){if(e.target===this)closeAssignScan();});
+</script>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ⚠️ 本文件为 Jinja2 后端模板，需要后端服务器渲染，禁止双击打开！ -->
+    <!-- 正确访问方式: http://localhost:8081 -->
+    <title>IT 资产管理系统资产大盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #333; font-size: 13px; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* 顶部导航栏 */
+        .top-bar { background: linear-gradient(135deg, #1e3a5f, #2d5a87); color: #fff; padding: 18px 24px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .top-bar h1 { font-size: 20px; font-weight: 700; }
+        .top-bar .sub { opacity: 0.75; font-size: 11px; margin-top: 2px; }
+        .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat { text-align: center; min-width: 90px; }
+        .stat .num { font-size: 22px; font-weight: 700; }
+        .stat .txt { font-size: 10px; opacity: 0.7; }
+        .stat .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+        .tag-blue { background: rgba(59,130,246,0.3); }
+        .tag-orange { background: rgba(245,158,11,0.3); }
+        
+        /* 图表行 */
+        .charts-row { display: flex; gap: 16px; margin-bottom: 16px; }
+        .chart-box { flex: 1; background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); height: 260px; }
+        
+        /* 筛选工具栏 */
+        .filter-bar { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-bar .f-btn { padding: 5px 14px; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
+        .filter-bar .f-btn.active { background: #1e3a5f; color: #fff; border-color: #1e3a5f; }
+        .filter-bar .f-btn:hover:not(.active) { border-color: #1e3a5f; color: #1e3a5f; }
+        .filter-bar .search-input { padding: 5px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; width: 200px; outline: none; }
+        .filter-bar .search-input:focus { border-color: #3b82f6; }
+        .filter-bar select { padding: 5px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; outline: none; background: #fff; }
+        
+        /* 表格 */
+        .table-wrap { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: linear-gradient(#f7f9fc, #edf1f6); padding: 10px 8px; text-align: left; font-weight: 600; color: #555; font-size: 11px; border-bottom: 2px solid #dde2eb; position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+        td { padding: 8px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; font-size: 12px; color: #444; }
+        tr:hover td { background: #f5f8ff; }
+        .code { font-family: 'Monaco', 'Consolas', monospace; font-size: 11px; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; color: #1e40af; }
+        .st { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+        .st-in_use { background: #d1fae5; color: #065f46; }
+        .st-in_stock { background: #dbeafe; color: #1e40af; }
+        .st-scrapped { background: #fee2e2; color: #991b1b; }
+        .st-disposed { background: #f3f4f6; color: #6b7280; }
+        .asset-link { color: #1e40af; text-decoration: none; border-bottom: 1px dashed #1e40af; cursor: pointer; font-weight: 600; font-size: 12px; }
+        .asset-link:hover { color: #1e3a5f; }
+        
+        /* 分页 */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 14px; }
+        .pagination .p-btn { padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; color: #555; min-width: 36px; text-align: center; text-decoration: none; display: inline-block; }
+        .pagination .p-btn:hover:not(.active):not(.dots) { border-color: #1e3a5f; color: #1e3a5f; }
+        .pagination .p-btn.active { background: #1e3a5f; color: #fff; border-color: #1e3a5f; }
+        .pagination .p-btn.dots { border: none; background: transparent; cursor: default; color: #999; }
+        .pagination .p-info { font-size: 12px; color: #888; margin-left: 12px; }
+        
+        /* 财务概览 */
+        .finance-summary { background: #e6f7ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #91d5ff; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 顶部导航 -->
+    <div class="top-bar">
+        <div>
+            <h1>IT 资产管理系统 IT 资产大盘</h1>
+            <div class="sub">全生命周期管理 · 审计追踪 · 实时数据</div>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <div class="num">{{ total_count }}</div>
+                <div class="txt">资产总数</div>
+            </div>
+            <div class="stat">
+                <div class="num">{{ counts.in_use }}<span class="tag tag-blue">在用</span></div>
+                <div class="txt">分配使用</div>
+            </div>
+            <div class="stat">
+                <div class="num">{{ counts.in_stock }}<span class="tag tag-orange">空闲</span></div>
+                <div class="txt">闲置入库</div>
+            </div>
+            <div class="stat">
+                <div class="num">¥{{ "{:,.0f}".format(total_price) }}</div>
+                <div class="txt">采购总值</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="charts-row">
+        <div class="chart-box" id="statusChart"></div>
+        <div class="chart-box" id="typeValueChart"></div>
+    </div>
+
+    <!-- 筛选工具栏 -->
+    <div class="filter-bar">
+        <span style="font-weight:600; color:#555; font-size:12px;">状态：</span>
+        <a href="/?page=1" class="f-btn {% if not current_status %}active{% endif %}">全部 ({{ counts.total }})</a>
+        <a href="/?status=in_use&page=1" class="f-btn {% if current_status == 'in_use' %}active{% endif %}">在用 ({{ counts.in_use }})</a>
+        <a href="/?status=in_stock&page=1" class="f-btn {% if current_status == 'in_stock' %}active{% endif %}">闲置 ({{ counts.in_stock }})</a>
+        <a href="/?status=scrapped&page=1" class="f-btn {% if current_status == 'scrapped' %}active{% endif %}">报废 ({{ counts.scrapped }})</a>
+
+        {% if regions %}
+        <span style="font-weight:600; color:#555; font-size:12px; margin-left:8px;">地区：</span>
+        <select onchange="if(this.value) window.location='/?' + (this.value ? 'region=' + this.value : '') + '&page=1'">
+            <option value="">全部地区</option>
+            {% for r in regions[:20] %}
+            <option value="{{ r }}" {% if current_region == r %}selected{% endif %}>{{ r[:12] }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+
+        <form method="GET" action="/" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+            <input type="text" name="search" class="search-input" placeholder="搜索编码/姓名/型号..." value="{{ current_search }}">
+            {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+            <button type="submit" style="padding:5px 12px;border:1px solid #1e3a5f;border-radius:6px;background:#1e3a5f;color:#fff;font-size:12px;cursor:pointer;">搜索</button>
+            {% if current_search or current_status or current_region %}
+            <a href="/" style="padding:5px 10px;border:1px solid #ddd;border-radius:6px;color:#888;font-size:12px;text-decoration:none;">清除</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- 财务概览 -->
+    <div class="finance-summary">
+        <strong>财务概览：</strong>
+        资产总数: <strong>{{ total_count }}</strong> 台
+        | 原始采购总值: <strong>¥{{ "{:,.2f}".format(total_price) }}</strong>
+        {% if current_search or current_status or current_region %}
+        <span style="color:#888; font-size:12px; margin-left:12px;">（当前筛选结果）</span>
+        {% endif %}
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:36px;">#</th>
+                    <th>资产编码</th>
+                    <th>设备信息</th>
+                    <th>领用信息</th>
+                    <th style="width:80px;">采购时间</th>
+                    <th style="width:80px;">领用时间</th>
+                    <th style="width:72px;">状态</th>
+                    <th style="width:140px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td style="color:#999;">{{ (page - 1) * per_page + loop.index }}</td>
+                    <td>
+                        <strong><a href="/asset/{{ asset.asset_id }}" target="_blank" class="asset-link">{{ asset.asset_id }}</a></strong><br>
+                        <a href="/api/scan/{{ asset.asset_id }}" target="_blank" style="font-size:10px;color:#888;text-decoration:none;">📱扫码</a>
+                        <span style="color:#888; font-size:11px;">{{ asset.purchase_date if asset.purchase_date else '-' }}</span>
+                    </td>
+                    <td>
+                        {{ asset.brand }} {{ asset.model }}<br>
+                        <span style="color:#888; font-size:11px;">{{ type_map_zh.get(asset.asset_type, asset.asset_type or '其他') }}</span>
+                        {% if asset.serial_number %}<br><span style="color:#888; font-size:10px;">SN: {{ asset.serial_number }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if asset.assignee %}
+                        <a href="/?search={{ asset.assignee | urlencode }}" style="color:#1e40af;text-decoration:none;font-weight:500;">{{ asset.assignee }}</a>
+                        {% else %}
+                        <span style="color:#999;">未分配</span>
+                        {% endif %}
+                        <br>
+                        <span style="color:#888; font-size:11px;">{{ asset.department or '-' }}</span>
+                    </td>
+                    <td>{{ asset.purchase_date or '-' }}</td>
+                    <td style="font-size:11px;color:#636e72;">{{ asset.assign_date[:10] if asset.assign_date else '-' }}</td>
+                    <td><span class="st st-{{ asset.status }}">{{ status_zh.get(asset.status, asset.status) }}</span></td>
+                    <td>
+                        <div style="margin-bottom:4px;">
+                        <form action="/api/update_status" method="POST" style="margin:0;display:inline-flex;align-items:center;gap:4px;">
+                            <input type="hidden" name="asset_id" value="{{ asset.asset_id }}">
+                            <select name="new_status" style="padding:3px 6px;border-radius:4px;border:1px solid #ccc;font-size:11px;">
+                                <option value="in_stock" {% if asset.status == 'in_stock' %}selected{% endif %}>闲置入库</option>
+                                <option value="in_use" {% if asset.status == 'in_use' %}selected{% endif %}>分配使用</option>
+                                <option value="scrapped" {% if asset.status == 'scrapped' %}selected{% endif %}>报废</option>
+                            </select>
+                            <button type="submit" style="padding:3px 8px;border:1px solid #1e3a5f;border-radius:4px;background:#1e3a5f;color:#fff;font-size:11px;cursor:pointer;">更新</button>
+                        </form>
+                        </div>
+                        <button onclick="openAssign('{{ asset.asset_id }}')" style="padding:3px 10px;border:1px solid #28a745;border-radius:4px;background:#28a745;color:#fff;font-size:11px;cursor:pointer;">派发员工</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:40px;color:#999;">暂无匹配的资产数据</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 分页 -->
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="/?page={{ page - 1 }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_region %}&region={{ current_region }}{% endif %}" class="p-btn">上一页</a>
+            {% endif %}
+            {% for p in page_range %}
+                {% if p == "..." %}
+                <span class="p-btn dots">...</span>
+                {% elif p == page %}
+                <span class="p-btn active">{{ p }}</span>
+                {% else %}
+                <a href="/?page={{ p }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_region %}&region={{ current_region }}{% endif %}" class="p-btn">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="/?page={{ page + 1 }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}{% if current_region %}&region={{ current_region }}{% endif %}" class="p-btn">下一页</a>
+            {% endif %}
+            <span class="p-info">共 {{ total_pages }} 页，{{ total_count }} 条</span>
+        </div>
+    </div>
+</div>
+
+<!-- 派发资产 modal -->
+<div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:320px;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.2);">
+    <h3 style="margin-bottom:4px;font-size:15px;color:#1e3a5f;">派发资产</h3>
+    <div style="font-family:monospace;color:#0052d9;font-size:13px;margin-bottom:14px;" id="assignAssetId"></div>
+    <label style="font-size:12px;color:#888;display:block;margin-bottom:4px;">使用人（员工姓名）</label>
+    <input id="assignName" type="text" placeholder="输入员工姓名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeAssign()" style="padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">取消</button>
+      <button onclick="submitAssign()" style="padding:8px 16px;border:none;border-radius:6px;background:#28a745;color:#fff;cursor:pointer;font-size:13px;">确认派发</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    // 状态饼图
+    var statusChart = echarts.init(document.getElementById('statusChart'));
+    statusChart.setOption({
+        title: { text: '资产状态占比', left: 'center', textStyle: { fontSize: 14 } },
+        tooltip: { trigger: 'item' },
+        series: [{
+            name: '状态', type: 'pie', radius: ['30%', '55%'], avoidLabelOverlap: true,
+            label: { show: true, formatter: '{b}: {c}' },
+            data: {{ status_data|safe }},
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' } }
+        }]
+    });
+
+    // 类型价值饼图
+    var typeValueChart = echarts.init(document.getElementById('typeValueChart'));
+    typeValueChart.setOption({
+        title: { text: '资产价值分布', left: 'center', textStyle: { fontSize: 14 } },
+        tooltip: { trigger: 'item', valueFormatter: (v) => '¥' + v.toLocaleString() },
+        series: [{
+            name: '总价值', type: 'pie', radius: ['30%', '55%'],
+            label: { show: true, formatter: '{b}: ¥{c}' },
+            data: {{ type_value_data|safe }},
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.3)' } }
+        }]
+    });
+
+    // 派发资产：打开/关闭/提交
+    function openAssign(aid){
+        document.getElementById('assignAssetId').textContent = aid;
+        document.getElementById('assignName').value = '';
+        document.getElementById('assignModal').style.display = 'flex';
+        document.getElementById('assignName').focus();
+    }
+    function closeAssign(){
+        document.getElementById('assignModal').style.display = 'none';
+    }
+    function submitAssign(){
+        var aid = document.getElementById('assignAssetId').textContent;
+        var name = document.getElementById('assignName').value.trim();
+        if(!name){ alert('请输入员工姓名'); return; }
+        var f = document.createElement('form');
+        f.method = 'POST'; f.action = '/api/assign';
+        f.appendChild(Object.assign(document.createElement('input'), {type:'hidden', name:'asset_id', value:aid}));
+        f.appendChild(Object.assign(document.createElement('input'), {type:'hidden', name:'assignee', value:name}));
+        document.body.appendChild(f); f.submit();
+    }
+    document.getElementById('assignModal').addEventListener('click', function(e){ if(e.target === this) closeAssign(); });
+
+    window.addEventListener('resize', function() {
+        statusChart.resize();
+        typeValueChart.resize();
+    });
+</script>
+</body>
+</html>

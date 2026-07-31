@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>补打标签 - {{ asset.asset_id }}</title>
+<!-- 标签仅含稳定字段(品牌/编码/名称/配置·SN/二维码)，严禁易变字段(使用人/部门/价格/采购日期)。二维码指向固定公网地址(GitHub Pages)，永久不变。 -->
+<style>
+@page { margin: 0; size: 50mm 30mm; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f0f0f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.print-all-btn {
+  background: #6c5ce7;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(108,92,231,0.4);
+}
+.print-all-btn:hover { background: #5a4bd1; }
+.back-link {
+  color: #b2bec3;
+  font-size: 13px;
+  text-decoration: none;
+}
+.back-link:hover { color: #6c5ce7; }
+@media print {
+  body { background: #fff; padding: 0; gap: 0; }
+  .no-print { display: none !important; }
+  .label-card { box-shadow: none; border-radius: 0; page-break-after: always; break-inside: avoid; }
+}
+.label-card {
+  width: 590px;
+  height: 354px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
+}
+.accent-bar {
+  width: 8px;
+  background: linear-gradient(180deg, #6c5ce7 0%, #a29bfe 100%);
+  flex-shrink: 0;
+}
+.left {
+  flex: 1;
+  padding: 22px 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.badge-brand {
+  background: #6c5ce7;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.asset-code {
+  font-size: 22px;
+  font-weight: 800;
+  color: #2d3436;
+  letter-spacing: 1.5px;
+  font-family: "SF Mono", "Menlo", monospace;
+  margin-bottom: 6px;
+}
+.asset-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #6c5ce7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 8px;
+}
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 12px;
+}
+.info-item {
+  font-size: 12px;
+  color: #636e72;
+  line-height: 1.6;
+}
+.info-item .lbl { color: #b2bec3; font-size: 11px; }
+.info-item .val { color: #2d3436; font-weight: 600; }
+.bottom-row {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #00b894;
+  font-weight: 500;
+}
+.right {
+  flex-shrink: 0;
+  width: 160px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  border-left: 1px dashed #dfe6e9;
+}
+.qr-wrap {
+  width: 128px;
+  height: 128px;
+}
+.qr-wrap img {
+  width: 100%;
+  height: 100%;
+}
+.qr-tip {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #6c5ce7;
+  font-weight: 600;
+  text-align: center;
+}
+.sn-bar {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 160px;
+  height: 22px;
+  background: #f8f6ff;
+  border-top: 1px solid #e8e3ff;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+.sn-bar span {
+  font-size: 11px;
+  color: #a29bfe;
+  font-family: "SF Mono", monospace;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="no-print" style="text-align:center;margin-bottom:10px;">
+  <button class="print-all-btn" onclick="window.print()">🖨️ 打印此标签</button>
+  <br><br>
+  <a class="back-link" href="/asset/{{ asset.asset_id }}">← 返回资产详情</a>
+</div>
+
+<div class="label-card">
+  <div class="accent-bar"></div>
+  <div class="left">
+    <div>
+      <div class="top-row">
+        <span class="badge-brand">IT 资产管理系统资产</span>
+      </div>
+      <div class="asset-code">{{ asset.asset_id }}</div>
+      <div class="asset-name">{{ asset.name }}</div>
+    </div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="lbl">品牌·型号</div>
+        <div class="val">{{ (asset.brand or '') + (' · ' if asset.brand else '') + (asset.model or '—') }}</div>
+      </div>
+      <div class="info-item">
+        <div class="lbl">配置</div>
+        <div class="val">{{ (asset.cpu or '') + (' · ' if asset.cpu else '') + (asset.memory or '') + (' · ' if asset.memory else '') + (asset.disk or '—') }}</div>
+      </div>
+    </div>
+    <div class="bottom-row">📱 扫码查看实时状态</div>
+  </div>
+  <div class="right">
+    <div class="qr-wrap" style="overflow:hidden;border-radius:4px;display:flex;align-items:center;justify-content:center;">
+      <img src="{{ qr_data_uri }}" alt="QR" style="width:128px;height:128px;">
+    </div>
+    <div class="qr-tip">扫码查资产</div>
+  </div>
+  <div class="sn-bar">
+    <span>SN: {{ asset.serial_number or '待补' }}</span>
+  </div>
+</div>
+
+</body>
+</html>
