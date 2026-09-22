@@ -41,6 +41,21 @@ python3 web_server.py
 - 公网部署：将系统托管到你自己的已备案域名/云服务器即可随处可扫。
 - `gen_labels.py` 通过环境变量 `ASSET_LABEL_BASE_URL` 切换地址，代码内**不硬编码任何具体地址**。
 
+## 设计思路（为什么这样设计）
+
+本系统不炫技，每一处取舍都指向同一个目标——**便于审计、出事能还原真相**。要点：
+
+- **真相源唯一**：SQLite（`assets.db`）是真值，JSON 是派生可读副本，避免"两个库谁为准"的分裂。
+- **事件溯源审计**：`assets` 存当前快照，`operation_log` 只追加事件，任意历史时点状态可重算。
+- **标签与数据解耦**：二维码只编码 `{BASE_URL}/{编码}`，标签只印稳定字段，设备变更**无需重打**标签。
+- **单文件存储**：零服务依赖，便于整体备份、哈希校验、快照。
+
+完整方法、SOP 与架构决策见 [`docs/`](./docs/)：
+
+- [IT 资产全生命周期管理方法（通用版）](./docs/IT资产全生命周期管理方法_通用版.md)
+- [可审计资产管理 SOP（通用版）](./docs/可审计资产管理SOP_通用版.md)
+- [架构与设计决策说明](./docs/架构与设计决策说明.md)
+
 ## 目录结构
 
 ```
@@ -53,8 +68,8 @@ opensource-clean/
 ├── convert_excel.py        # Excel → 数据库 导入
 ├── migrate_asset_data.py   # 数据迁移校准
 ├── import_from_desktop.py  # 桌面端台账导入
-├── enrich_db.py / force_import.py / force_populate.py / recover_hardware_info.py / alter_db.py
-├── check_*.py / test_*.py / verify_import.py / missing_ids.py / investigate_excel.py  # 校验与测试
+├── enrich_db.py / alter_db.py / recover_hardware_info.py  # 数据补全/结构变更/硬件信息恢复
+├── check_*.py / test_*.py / investigate_excel.py / missing_ids.py  # 校验与测试
 ├── templates/              # 数据驱动模板（不含数据）
 │   ├── index.html          # 资产大盘
 │   ├── scan.html           # 扫码详情页
@@ -63,6 +78,10 @@ opensource-clean/
 │   └── dashboard_script.html
 ├── schema/
 │   └── schema.sql          # 仅表结构（零数据）
+├── docs/                   # 设计方法与 SOP（通用版，虚拟数据）
+│   ├── IT资产全生命周期管理方法_通用版.md
+│   ├── 可审计资产管理SOP_通用版.md
+│   └── 架构与设计决策说明.md
 ├── sample_data/
 │   └── 导入模板.xlsx        # 空白导入模板（列头对齐）
 ├── data/                   # 你自己的数据库放这里（.gitignore 已排除）
